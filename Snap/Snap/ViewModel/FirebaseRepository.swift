@@ -11,6 +11,8 @@ class FirebaseRepository {
     @Published var currentUserInfo: UserInfo?
     
     var fetchedItems: [Item] = []
+    var fetchedUsers: [UserInfo] = []
+    var fetchedRentalRequests: [RentalRequest] = []
     
     let auth = Auth.auth()
     let storage = Storage.storage()
@@ -105,9 +107,9 @@ class FirebaseRepository {
         }
     }
     
-    // 아이템 정보를 저장
-    func saveItemInfo(data: [String: Any], path: String, completion: @escaping (Bool) -> Void) {
-        db.collection("users").document(currentUserUID).collection("items").document(path).setData(data) { error in
+    // 생성한 아이템 정보를 저장
+    func saveItemInfo(item: Item, path: String, completion: @escaping (Bool) -> Void) {
+        db.collection("items").document(path).setData(item.toDictionary()) { error in
             if let error = error {
                 print("아이템 정보 저장 중 오류 발생: \(error.localizedDescription)")
                 completion(false)
@@ -119,7 +121,9 @@ class FirebaseRepository {
     
     // 유저의 아이템 정보를 불러옴
     func fetchItems(completion: @escaping (Bool) -> Void) {
-        db.collection("users").document(currentUserUID).collection("items").getDocuments { (snapshot, error) in
+        // 배열 초기화
+        fetchedItems = []
+        db.collection("items").getDocuments { (snapshot, error) in
             if let error = error {
                 print("Error getting documents: \(error)")
                 completion(false)
@@ -128,9 +132,94 @@ class FirebaseRepository {
                     self.fetchedItems = snapshot!.documents.compactMap { dictionary in
                         Item(from: dictionary.data())
                     }
-                    print(self.fetchedItems.count)
+                    print("아이템 정보를 읽어오는데 성공하였습니다")
                     completion(true)
                 }
+            }
+        }
+    }
+    
+    // 모든 유저 정보를 읽어오기
+    func fetchUsers(completion: @escaping (Bool) -> Void) {
+        // 배열 초기화
+        fetchedUsers = []
+        db.collection("users").getDocuments() { (snapshot, error) in
+            if let _ = error {
+                print("유저 정보를 읽어오는데 실패하였습니다.")
+                completion(false)
+            } else {
+                DispatchQueue.main.async {
+                    self.fetchedUsers = snapshot!.documents.compactMap { dictionary in
+                        UserInfo(from: dictionary.data())
+                    }
+                    print("유저 정보를 읽어오는데 성공하였습니다.")
+                    completion(true)
+                }
+            }
+        }
+    }
+    
+    // 물품 대여 요청을 DB에서 불러옴
+    func fetchRentalRequests(completion: @escaping (Bool) -> Void) {
+        // 배열 초기화
+        fetchedRentalRequests = []
+        db.collection("requests").getDocuments() { (snapshot, error) in
+            if let _ = error {
+                print("대여 정보를 읽어오는데 실패하였습니다.")
+                completion(false)
+            } else {
+                DispatchQueue.main.async {
+                    self.fetchedRentalRequests = snapshot!.documents.compactMap { dictionary in
+                        RentalRequest(from: dictionary.data())
+                    }
+                    print("대여 정보를 읽어오는데 성공하였습니다.")
+                    completion(true)
+                }
+            }
+        }
+    }
+    
+    // 물품 대여 요청을 DB에 저장
+    func saveRentalRequest(data: [String: Any], path: String, completion: @escaping (Bool) -> Void) {
+        // 1. request 저장
+        db.collection("requests").document(path).setData(data) { error in
+            if let error = error {
+                print("대여 요청 정보 저장 중 오류 발생: \(error.localizedDescription)")
+                completion(false)
+            } else {
+                completion(true)
+            }
+        }
+    }
+    
+    func updateItem(item: Item, completion: @escaping (Bool) -> Void) {
+        // 아이템 정보 업데이트
+        let itemData = item.toDictionary()
+        db.collection("items").document(item.id).setData(itemData, merge: true) { error in
+            if let _ = error {
+                completion(false)
+            } else {
+                completion(true)
+            }
+        }
+    }
+    
+    func updateUserInfo(data: [String: Any], userId: String, completion: @escaping (Bool) -> Void) {
+        db.collection("users").document(userId).setData(data, merge: true) { error in
+            if let _ = error {
+                completion(false)
+            } else {
+                completion(true)
+            }
+        }
+    }
+    
+    func updateRequests(data: [String: Any], requestId: String, completion: @escaping (Bool) -> Void) {
+        db.collection("requests").document(requestId).setData(data, merge: true) { error in
+            if let _ = error {
+                completion(false)
+            } else {
+                completion(true)
             }
         }
     }

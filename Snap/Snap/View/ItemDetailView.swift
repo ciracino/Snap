@@ -1,98 +1,136 @@
 import SwiftUI
 
 struct ItemDetailView: View {
-    var item: Item
-    var image: Image
+    @EnvironmentObject var authViewModel: AuthViewModel
+    @EnvironmentObject var rentalRequestViewModel: RentalRequestViewModel
+    @EnvironmentObject var userListViewModel: UserListViewModel
+    @EnvironmentObject var viewModel: ItemViewModel
+    
+    @Binding var path: NavigationPath
+    
+    let id: String
+    
     var body: some View {
-        ScrollView {
-            LazyVStack {
-                image
-                    .resizable()
-                    .scaledToFit()
-                    .frame(width: 300, height: 300)
-                    .clipShape(RoundedRectangle(cornerRadius: 8))
-                    .padding(.bottom, 8)
-                HStack {
-                    Text("\(item.name)")
-                        .padding(.top, 4)
-                        .padding(.bottom, 4)
-                    Spacer()
-                }
-                HStack {
-                    Text("\(item.quantity)")
-                        .font(.title2)
-                    Spacer()
-                }
-                .padding(.bottom, 8)
-                Divider()
-                // 관련 댓글
-                HStack {
-                    Text("댓글")
-                    Spacer()
-                    Button {
-                        
-                    } label: {
+        VStack(spacing: 0) {
+            if let item = viewModel.items.first(where: { $0.id == id }) {
+                ScrollView(showsIndicators: false) {
+                    // 아이템 이미지
+                    AsyncImage(url: URL(string: item.imageURL)) { phase in
+                        switch phase {
+                        case .empty:
+                            ProgressView()
+                        case .success(let image):
+                            image
+                                .resizable()
+                                .aspectRatio(contentMode: .fill)
+                                .frame(width: 300, height: 300)
+                                .clipped()
+                                .clipShape(RoundedRectangle(cornerRadius: 8))
+                        case .failure(let error):
+                            Image(systemName: "xmark")
+                        }
+                    }
+                    
+                    // 아이템 이름, 수량
+                    VStack {
                         HStack {
-                            Text("더 보기")
-                            Button {
-                                
-                            } label: {
-                                Image(systemName: "chevron.right")
+                            Text("\(item.name)")
+                                .font(.title3)
+                                .fontWeight(.semibold)
+                            Spacer()
+                        }
+                        HStack {
+                            Text("\(item.quantity)")
+                                .font(.title)
+                                .fontWeight(.bold)
+                            Spacer()
+                        }
+                    }
+                    .padding()
+                    
+                    Divider()
+                    
+                    // 아이템 대여자 목록
+                    LazyVStack {
+                        HStack {
+                            Text("대여자")
+                                .font(.title)
+                                .fontWeight(.bold)
+                            Spacer()
+                        }
+                        .padding(.bottom, 10)
+                        ForEach(item.requests, id: \.self) { requestId in
+                            HStack {
+                                Text("\(getUserNameFromRequestId(requestId: requestId))")
+                                    .font(.title3)
+                                    .fontWeight(.semibold)
+                                Spacer()
                             }
                         }
                     }
+                    .padding()
+                    
+                    
                 }
-                // 댓글 3개까지만 보여주기
                 Spacer()
+                if let user = authViewModel.currentUserInfo {
+                    if !user.isAdmin {
+                        VStack(spacing: 0) {
+                            Divider()
+                                .padding(.top, 20)
+                            
+                            // 하단 고정 대여 버튼
+                            Button {
+                                let requestId = UUID().uuidString
+                                
+                                // requests 에 데이터 저장
+                                rentalRequestViewModel.createRequest(itemId: item.id, requestId: requestId)
+                                
+                                // 유저 정보 업데이트
+                                if let userInfo = authViewModel.currentUserInfo {
+                                    rentalRequestViewModel.updateUserRequests(userInfo: userInfo, requestId: requestId)
+                                }
+                                path.removeLast()
+                            } label: {
+                                HStack {
+                                    Image(systemName: "bag.fill")
+                                        .font(.title2)
+                                    Text("대여하기")
+                                        .font(.title3.bold())
+                                }
+                                .foregroundStyle(.white)
+                                .frame(maxWidth: .infinity)
+                                .frame(height: 56)
+                                .background(
+                                    LinearGradient(
+                                        colors: [Color.blue, Color.blue.opacity(0.8)],
+                                        startPoint: .leading,
+                                        endPoint: .trailing
+                                    )
+                                )
+                                .cornerRadius(16)
+                                .shadow(color: .blue.opacity(0.4), radius: 10, y: 5)
+                            }
+                            .disabled(item.quantity == 0)
+                            .padding(.horizontal)
+                            .padding(.bottom, 10)
+                        }
+                        .background(Color(.systemBackground))
+                    }
+                }
+            } else {
+                Text("해당 아이템을 찾지 못했습니다.")
             }
-            .padding()
         }
-        .scrollIndicators(.hidden)
-        HStack {
-            Button {
-                
-            } label: {
-                Text("대여")
-            }
-            Button {
-                
-            } label: {
-                Text("예약")
-            }
-        }
+        .padding()
     }
     
-    private func IntPrice(price: Double) -> Int {
-        return Int(price)
-    }
-}
-
-
-struct sampleKeyword: View {
-    let keyword: String
-    var body: some View {
-        Text(keyword)
-            .padding(5)
-            .foregroundStyle(.red)
-            .background(Color.yellow)
-            .clipShape(RoundedRectangle(cornerRadius: 10))
-    }
-}
-
-struct sampleLogPreview: View {
-    let image: Image
-    var body: some View {
-        VStack {
-            image
-                .resizable()
-                .scaledToFit()
-                .frame(width: 120, height: 120)
-                .clipShape(RoundedRectangle(cornerRadius: 8))
-                .padding(.bottom, 4)
-            Text("가나다라마바사아자차카타파하")
-                .frame(width: 120)
-                .clipped()
-                .lineLimit(1)
+    private func getUserNameFromRequestId(requestId: String) -> String {
+        if let userId = rentalRequestViewModel.returnUserId(requestId: requestId) {
+            if let userInfo = userListViewModel.returnUserInfo(userId: userId) {
+                return userInfo.name
+            }
         }
+        return "일치하는 유저가 없습니다."
     }
 }

@@ -1,6 +1,6 @@
 import SwiftUI
 
-struct WriteItemInfoView: View {
+struct AdminWriteItemInfoView: View {
     @EnvironmentObject var viewModel: ItemViewModel
     @Binding var path: NavigationPath
     
@@ -22,7 +22,7 @@ struct WriteItemInfoView: View {
             Spacer()
             Button {
                 viewModel.createItem()
-                path.removeLast(2)
+                path.removeLast()
             } label: {
                 Text("확인")
             }
@@ -48,3 +48,4 @@ struct WriteItemInfoView: View {
         .navigationTitle("정보 입력")
     }
 }
+

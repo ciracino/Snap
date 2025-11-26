@@ -1,9 +1,8 @@
 import SwiftUI
 
-struct SelectItemView: View {
-    @EnvironmentObject var viewModel: ItemViewModel
-    
+struct AdminSelectItemView: View {
     @Binding var path: NavigationPath
+    @EnvironmentObject var viewModel: ItemViewModel
     
     var body: some View {
         VStack {
@@ -26,5 +25,15 @@ struct SelectItemView: View {
                 .frame(maxWidth: .infinity, maxHeight: 500)
         }
         .navigationBarBackButtonHidden(true)
+        .navigationTitle("사진 선택")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .navigationBarTrailing) {
+                NavigationLink(value: AdminRoute.writeItemInfoView) {
+                    Image(systemName: "chevron.right")
+                }
+                .disabled(viewModel.createdItemImage == nil ? true : false)
+            }
+        }
     }
 }

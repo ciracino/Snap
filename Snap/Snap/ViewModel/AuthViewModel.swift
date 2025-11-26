@@ -8,6 +8,7 @@ class AuthViewModel: ObservableObject {
     @Published var selectedImage: UIImage?
     
     @Published var isLoading: Bool = false
+    @Published var isAdmin: Bool = false
     
     @Published var currentUserUID = ""
     @Published var currentUserInfo: UserInfo?
@@ -29,7 +30,10 @@ class AuthViewModel: ObservableObject {
     func fetchUserInfo() {
         repo.fetchUserInfo(uid: currentUserUID) { result in
             if result {
-                self.currentUserInfo = self.repo.currentUserInfo
+                if let currentUser = self.repo.currentUserInfo {
+                    self.currentUserInfo = currentUser
+                    self.isAdmin = currentUser.isAdmin
+                }
                 print("userInfo 업데이트 완료")
             } else {
                 print("UserInfo 로드에 실패하였습니다.")
@@ -67,7 +71,7 @@ class AuthViewModel: ObservableObject {
                         // 이미지 url 을 가져오자
                         let imageURL = self.repo.currentUploadImageURL
                         let userName = self.email.components(separatedBy: "@")[0]
-                        let newUserInfo = UserInfo(id: self.currentUserUID, name: userName, imageURL: imageURL, isAdmin: false).toDictionary()
+                        let newUserInfo = UserInfo(id: self.currentUserUID, name: userName, imageURL: imageURL, isAdmin: false, requests: []).toDictionary()
                         print(newUserInfo)
                         self.repo.saveUserInfo(data: newUserInfo) { result in
                             if result {

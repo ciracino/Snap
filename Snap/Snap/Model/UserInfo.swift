@@ -4,12 +4,14 @@ struct UserInfo: Identifiable {
     var imageURL: String
     var overdueCount: Int = 0 // 연체 횟수
     var isAdmin: Bool = false // 사용자가 학생인지, 관리자인지 구분하는 플래그
+    var requests: [String] = [] // 대여 요청 아이디를 담자
     
-    init(id: String, name: String, imageURL: String, isAdmin: Bool) {
+    init(id: String, name: String, imageURL: String, isAdmin: Bool, requests: [String]) {
         self.id = id
         self.name = name
         self.imageURL = imageURL
         self.isAdmin = isAdmin // 관리자로 계정 생성시 플래그를 체크하면 true
+        self.requests = requests
     }
     
     // 스토어에서 데이터를 읽어올 때 사용할 생성자
@@ -19,6 +21,7 @@ struct UserInfo: Identifiable {
         self.imageURL = data["imageURL"] as? String ?? ""
         self.overdueCount = data["overdueCount"] as? Int ?? 0
         self.isAdmin = data["isAdmin"] as? Bool ?? false
+        self.requests = data["requests"] as? [String] ?? []
     }
 }
 
